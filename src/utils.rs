@@ -46,10 +46,10 @@ pub(crate) fn get_colored_tier(tier: &String, oslist: &Vec<String>) -> ColoredSt
 pub(crate) fn get_colored_steam_deck_status(status: &String) -> ColoredString {
     let status = status.split_whitespace().last().unwrap();
     match status {
-        "Verified" => "Verified".truecolor(0, 207, 65),
-        "Playable" => "Playable".truecolor(255, 201, 42),
-        "Unsupported" => "Unsupported".truecolor(255, 0, 0),
-        _ => "unknown".truecolor(200, 200, 200)
+        "Verified" => "Verified".green(),
+        "Playable" => "Playable".yellow(),
+        "Unsupported" => "Unsupported".red(),
+        _ => ColoredString::from("unknown")
     }
 }
 
@@ -80,4 +80,32 @@ pub(crate) fn print_image(image: &DynamicImage, width: u32, height: u32) {
 
     // move cursor to the top of the image
     print!("\x1B[{}A", height);
+}
+
+fn get_hash(n1: u32, n2: u32, timestamp: u32) -> String {
+    format!("{}W{}", n2, n1 as u64 * (n2 % timestamp) as u64)
+}
+
+fn get_protondb_id(hash: &str) -> u32 {
+    (hash.to_owned() + "m")
+        .chars()
+        .fold(0, |acc: i32, char| (acc << 5).wrapping_sub(acc) + char as i32)
+        .abs() as u32
+}
+
+pub(crate) fn calculate_protondb_id(steam_id: u32, number_of_reports: u32, counts_timestamp: u32) -> u32 {
+    let hash1 = get_hash(steam_id, number_of_reports, counts_timestamp);
+    let hash2 = get_hash(1, steam_id, counts_timestamp);
+    let hash3 = format!("p{}*vRT{}undefined", hash1, hash2);
+    get_protondb_id(&hash3)
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct Counts {
+    pub reports: u32,
+    pub timestamp: u32
+}
+
+pub(crate) fn is_query_id(query: &str) -> bool {
+    query.chars().all(char::is_numeric)
 }

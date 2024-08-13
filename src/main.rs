@@ -2,11 +2,13 @@ mod post_result;
 mod post_body;
 mod args;
 mod utils;
+mod display_reports;
 
 use post_result::PostResult;
 use post_body::Body;
 use args::Args;
-use utils::{fetch_images, fetch_summaries, get_colored_steam_deck_status, get_colored_tier, print_image, Summary};
+use utils::{fetch_images, fetch_summaries, get_colored_steam_deck_status, get_colored_tier, is_query_id, print_image, Summary};
+use display_reports::{fetch_reports, Reports};
 
 use reqwest::ClientBuilder;
 use clap::Parser;
@@ -14,10 +16,11 @@ use colored::Colorize;
 use reqwest::header::HeaderMap;
 use futures::join;
 use image::DynamicImage;
+use crate::display_reports::display_reports;
 
 #[tokio::main]
 async fn main() {
-    let mut args = Args::parse();
+    let args = Args::parse();
 
     let mut new_search = Vec::new();
     for arg in &args.query {
@@ -28,10 +31,12 @@ async fn main() {
             new_search.push(arg.clone());
         }
     }
-    args.query = new_search;
+    let query = new_search.join(" ");
+
+    let should_display_reports = args.count == 1 || is_query_id(&query);
 
     let body = Body {
-        query: args.query.join(" "),
+        query: query.to_string(),
         facet_filters: vec![vec!["appType:Game"]],
         hits_per_page: args.count,
         attributes_to_retrieve: vec!["name", "objectID", "oslist"],
@@ -54,14 +59,30 @@ async fn main() {
         .send()
         .await.unwrap().json::<PostResult>().await.unwrap();
 
-    let steam_ids = res.hits.iter().map(|game| game.object_id.clone()).collect();
+    let steam_ids: Vec<String> = res.hits.iter().map(|game| game.object_id.clone()).collect();
 
     let summaries: Vec<Option<Summary>>;
     let mut images: Vec<DynamicImage> = Vec::new();
+    let mut reports = Reports {
+        page: 0,
+        per_page: 0,
+        reports: Vec::new(),
+        total: 0
+    };
+
+    let steam_id: u32 = steam_ids.first().unwrap().parse().unwrap();
     if args.images {
-        (summaries, images) = join!(fetch_summaries(&client, &steam_ids), fetch_images(&client, &steam_ids));
+        if should_display_reports {
+            (summaries, images, reports) = join!(fetch_summaries(&client, &steam_ids), fetch_images(&client, &steam_ids), fetch_reports(&client, steam_id));
+        } else {
+            (summaries, images) = join!(fetch_summaries(&client, &steam_ids), fetch_images(&client, &steam_ids));
+        }
     } else {
-        summaries = fetch_summaries(&client, &steam_ids).await;
+        if args.count == 1 {
+            (summaries, reports) = join!(fetch_summaries(&client, &steam_ids), fetch_reports(&client, steam_id));
+        } else {
+            summaries = fetch_summaries(&client, &steam_ids).await;
+        }
     }
 
     const IMAGE_WIDTH: u32 = 14;
@@ -84,7 +105,6 @@ async fn main() {
 
     for (index, game) in res.hits.into_iter().enumerate() {
         lines_printed = 0;
-
         if index != 0 { println!() }
 
         if args.images { print_image(&images[index], IMAGE_WIDTH, IMAGE_HEIGHT) }
@@ -106,5 +126,10 @@ async fn main() {
         if args.images && IMAGE_HEIGHT > lines_printed {
             print!("{}", "\n".repeat((IMAGE_HEIGHT - lines_printed) as usize));
         }
+    }
+
+    if should_display_reports {
+        let termsize::Size { rows: _, cols: width } = termsize::get().unwrap();
+        display_reports(reports, &args, &client, width).await;
     }
 }
