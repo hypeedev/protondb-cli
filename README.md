@@ -17,6 +17,35 @@ ProtonDB CLI is a command-line tool to fetch and display game summaries from the
 
 ## Installation
 
+### Arch Linux
+
+`protondb-cli` is available as a package in the [AUR](https://aur.archlinux.org). You can install it with your preferred [AUR helper](https://wiki.archlinux.org/title/AUR_helpers). Example:
+```sh
+paru -S protondb-cli
+```
+
+### AppImage
+
+Download the latest AppImage from the [releases page](https://github.com/hypeedev/protondb-cli/releases/latest).
+
+Make sure the file is executable:
+```sh
+chmod +x protondb-cli.AppImage
+```
+
+Run the AppImage:
+```sh
+./protondb-cli.AppImage --help
+```
+
+You can also move the AppImage to a directory in your `$PATH` to run it from anywhere:
+```sh
+sudo mv protondb-cli.AppImage /usr/local/bin/protondb-cli
+protondb-cli --help
+```
+
+## Compiling from source
+
 Ensure you have Rust and Cargo installed on your system. You can install Rust and Cargo using [rustup](https://rustup.rs/).
 
 Clone the repository:
