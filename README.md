@@ -6,6 +6,9 @@ ProtonDB CLI is a command-line tool to fetch and display game summaries from the
 
 - [Features](#features)
 - [Installation](#installation)
+- - [Arch Linux](#arch-linux)
+- - [AppImage](#appimage)
+- [Compiling from source](#compiling-from-source)
 - [Contributing](#contributing)
 - [License](#license)
 
