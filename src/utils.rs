@@ -83,7 +83,7 @@ pub(crate) fn print_image(image: &DynamicImage, width: u32, height: u32) {
 }
 
 fn get_hash(n1: u32, n2: u32, timestamp: u32) -> String {
-    format!("{}W{}", n2, n1 as u64 * (n2 % timestamp) as u64)
+    format!("{}p{}", n2, n1 as u64 * (n2 % timestamp) as u64)
 }
 
 fn get_protondb_id(hash: &str) -> u32 {
