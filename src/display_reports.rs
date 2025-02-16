@@ -81,25 +81,26 @@ fn get_tinker_steps(report: &Report) -> Vec<String> {
 }
 
 macro_rules! label {
-    ($label:expr, $value:expr) => {
-        let label = indent_by(AVATAR_WIDTH as usize + 1, (&format!("{}:", $label).truecolor(200, 200, 200)).to_string());
+    ($indent:expr, $label:expr, $value:expr) => {
+        let label = indent_by($indent, format!("{}:", $label).truecolor(200, 200, 200).to_string());
         println!("{} {}", label, $value);
     };
-    ($value:expr) => {
-        println!("{}", indent_by(AVATAR_WIDTH as usize + 1, $value.to_string()));
+    ($indent:expr, $value:expr) => {
+        let label = indent_by($indent, $value.to_string());
+        println!("{}", label);
     };
     () => {
         println!();
     };
 }
 
-fn print_timestamp(report: &Report) -> u8 {
+fn print_timestamp(indent: usize, report: &Report) -> u8 {
     let timestamp = chrono::DateTime::from_timestamp(report.timestamp as i64, 0).unwrap();
-    label!(HumanTime::from(timestamp).to_string().truecolor(120, 120, 120).italic());
+    label!(indent, HumanTime::from(timestamp).to_string().truecolor(120, 120, 120).italic());
     1
 }
 
-fn print_header(report: &Report) -> u8 {
+fn print_header(indent: usize, report: &Report) -> u8 {
     let mut report_header = format!("{} {}",
         report.contributor.steam.nickname,
         format!("({} reports)", report.contributor.report_tally).truecolor(120, 120, 120)
@@ -115,11 +116,11 @@ fn print_header(report: &Report) -> u8 {
             ).truecolor(200, 200, 200)
         );
     }
-    label!(report_header);
+    label!(indent, report_header);
     1
 }
 
-fn print_verdict(report: &Report, tinker_steps: &Vec<String>, print_newline: &mut bool) -> u8 {
+fn print_verdict(indent: usize, report: &Report, tinker_steps: &Vec<String>, print_newline: &mut bool) -> u8 {
     let mut lines_printed = 0;
     let starts_play = report.responses.starts_play == Some("yes".to_string());
 
@@ -127,38 +128,38 @@ fn print_verdict(report: &Report, tinker_steps: &Vec<String>, print_newline: &mu
         if tinker_steps.is_empty() {
             if let Some(verdict) = &report.responses.verdict {
                 if verdict == "yes" {
-                    label!("Recommended".green());
+                    label!(indent, "Recommended".green());
                 } else {
-                    label!("Not Recommended".yellow());
+                    label!(indent, "Not Recommended".yellow());
                 }
                 lines_printed += 1;
             }
         } else {
             if let Some(verdict_oob) = &report.responses.verdict_oob {
                 if verdict_oob == "yes" {
-                    label!("Recommended".green());
+                    label!(indent, "Recommended".green());
                 } else {
-                    label!("Not recommended".yellow());
+                    label!(indent, "Not recommended".yellow());
                 }
                 lines_printed += 1;
             }
 
             if let Some(verdict) = &report.responses.verdict {
                 if verdict == "yes" {
-                    label!("Recommended (Tinker)".green());
+                    label!(indent, "Recommended (Tinker)".green());
                 } else {
-                    label!("Not Recommended (Tinker)".yellow());
+                    label!(indent, "Not Recommended (Tinker)".yellow());
                 }
                 lines_printed += 1;
             }
         }
     } else {
-        label!("Borked".red());
+        label!(indent, "Borked".red());
         lines_printed += 1;
     }
 
     if let Some(verdict) = &report.responses.notes.verdict {
-        label!(verdict.replace("\n", " ").bold());
+        label!(indent, verdict.replace("\n", " ").bold());
         lines_printed += 1;
         *print_newline = true;
     }
@@ -166,20 +167,20 @@ fn print_verdict(report: &Report, tinker_steps: &Vec<String>, print_newline: &mu
     lines_printed
 }
 
-fn print_tinker_steps(report: &Report, tinker_steps: &Vec<String>, print_newline: &mut bool) -> u8 {
+fn print_tinker_steps(indent: usize, report: &Report, tinker_steps: &Vec<String>, print_newline: &mut bool) -> u8 {
     let starts_play = report.responses.starts_play == Some("yes".to_string());
     let mut lines_printed = 0;
 
     if !tinker_steps.is_empty() {
         label!();
-        label!("Tinker Steps", tinker_steps.join(", "));
+        label!(indent, "Tinker Steps", tinker_steps.join(", "));
         lines_printed += 2;
         *print_newline = true;
     }
 
     if let Some(launch_options) = &report.responses.launch_options {
         if !launch_options.is_empty() {
-            label!(launch_options.trim().on_truecolor(68, 68, 68));
+            label!(indent, launch_options.trim().on_truecolor(68, 68, 68));
             lines_printed += 1;
             *print_newline = true;
         }
@@ -187,14 +188,14 @@ fn print_tinker_steps(report: &Report, tinker_steps: &Vec<String>, print_newline
 
     if let Some(customizations_used) = &report.responses.notes.customizations_used {
         label!();
-        label!(customizations_used);
+        label!(indent, customizations_used);
         lines_printed += 2;
     }
 
     if let Some(tinker_override) = &report.responses.notes.tinker_override {
         if !tinker_override.is_empty() {
             if *print_newline { label!(); }
-            label!(tinker_override);
+            label!(indent, tinker_override);
             lines_printed += 1;
         }
     }
@@ -208,24 +209,24 @@ fn print_tinker_steps(report: &Report, tinker_steps: &Vec<String>, print_newline
     }
 
     if installs == "no" || opens == "no" || !starts_play {
-        label!("Installs", capitalize(&installs).yellow());
+        label!(indent, "Installs", capitalize(&installs).yellow());
         lines_printed += 1;
     }
 
     if installs == "yes" && opens == "no" || !starts_play {
-        label!("Opens", capitalize(&opens).yellow());
+        label!(indent, "Opens", capitalize(&opens).yellow());
         lines_printed += 1;
     }
 
     if opens == "yes" && !starts_play {
-        label!("Starts Play", "No".yellow());
+        label!(indent, "Starts Play", "No".yellow());
         lines_printed += 1;
     }
 
     lines_printed
 }
 
-fn print_faults(report: &Report) -> u8 {
+fn print_faults(indent: usize, report: &Report) -> u8 {
     let mut lines_printed = 0;
 
     if let Some(did_change_control_layout) = &report.responses.did_change_control_layout {
@@ -243,7 +244,7 @@ fn print_faults(report: &Report) -> u8 {
                     },
                     _ => "Unknown".to_string()
                 };
-                label!("Control Layout", label.yellow());
+                label!(indent, "Control Layout", label.yellow());
                 lines_printed += 2;
             }
         }
@@ -252,9 +253,9 @@ fn print_faults(report: &Report) -> u8 {
     if let Some(battery_performance) = &report.responses.battery_performance {
         if battery_performance == "yes" {
             label!();
-            label!("Battery Performance", "Made Changes To Improve".yellow());
+            label!(indent, "Battery Performance", "Made Changes To Improve".yellow());
             if let Some(note) = &report.responses.notes.battery_performance {
-                label!(note);
+                label!(indent, note);
             }
             lines_printed += 2;
         }
@@ -268,11 +269,11 @@ fn print_faults(report: &Report) -> u8 {
                     label!();
 
                     let faults = report.responses.follow_up.as_ref().unwrap().$faults.as_ref().unwrap().keys();
-                    label!($label, faults.join(", ").yellow());
+                    label!(indent, $label, faults.join(", ").yellow());
                     lines_printed += 1;
 
                     if let Some(note) = report.responses.notes.$faults.as_ref() {
-                        label!(note);
+                        label!(indent, note);
                         lines_printed += 1;
                     }
                 }
@@ -284,11 +285,11 @@ fn print_faults(report: &Report) -> u8 {
                 if faults == "yes" {
                     label!();
 
-                    label!($label, "Yes".yellow());
+                    label!(indent, $label, "Yes".yellow());
                     lines_printed += 1;
 
                     if let Some(note) = report.responses.notes.$faults.as_ref() {
-                        label!(note);
+                        label!(indent, note);
                         lines_printed += 1;
                     }
                 }
@@ -309,18 +310,18 @@ fn print_faults(report: &Report) -> u8 {
     lines_printed
 }
 
-fn print_concluding_notes(report: &Report) -> u8 {
+fn print_concluding_notes(indent: usize, report: &Report) -> u8 {
     let mut lines_printed = 0;
     if let Some(concluding_notes) = &report.responses.concluding_notes {
         if !concluding_notes.is_empty() {
             label!();
-            label!(concluding_notes.replace("\n", " "));
+            label!(indent, concluding_notes.replace("\n", " "));
             lines_printed += 2;
         }
     } else if let Some(concluding_notes) = &report.responses.notes.concluding_notes {
         if !concluding_notes.is_empty() {
             label!();
-            label!(concluding_notes.replace("\n", " "));
+            label!(indent, concluding_notes.replace("\n", " "));
             lines_printed += 2;
         }
     }
@@ -332,6 +333,7 @@ const AVATAR_HEIGHT: u8 = 3;
 
 pub(crate) async fn display_reports(reports: Reports, args: &Args, client: &Client, terminal_width: u16) {
     let avatars = fetch_avatars(client, &reports.reports.iter().filter(|report| !report.contributor.steam.avatar.is_empty()).map(|report| report.contributor.steam.avatar.clone()).collect()).await;
+    let indent = if args.images { AVATAR_WIDTH as usize + 1 } else { 0 };
 
     let max_index = reports.reports.len().min(args.reports as usize);
     let reports = reports.reports[0..max_index].to_vec();
@@ -346,12 +348,12 @@ pub(crate) async fn display_reports(reports: Reports, args: &Args, client: &Clie
             print_image(&avatars[index], AVATAR_WIDTH as u32, AVATAR_HEIGHT as u32)
         }
 
-        lines_printed += print_timestamp(&report);
-        lines_printed += print_header(&report);
-        lines_printed += print_verdict(&report, &tinker_steps, &mut print_newline);
-        lines_printed += print_tinker_steps(&report, &tinker_steps, &mut print_newline);
-        lines_printed += print_faults(&report);
-        lines_printed += print_concluding_notes(&report);
+        lines_printed += print_timestamp(indent, &report);
+        lines_printed += print_header(indent, &report);
+        lines_printed += print_verdict(indent, &report, &tinker_steps, &mut print_newline);
+        lines_printed += print_tinker_steps(indent, &report, &tinker_steps, &mut print_newline);
+        lines_printed += print_faults(indent, &report);
+        lines_printed += print_concluding_notes(indent, &report);
 
         if args.images && AVATAR_HEIGHT > lines_printed {
             print!("{}", "\n".repeat((AVATAR_HEIGHT - lines_printed) as usize));

@@ -122,41 +122,40 @@ pub(crate) fn indent_by(n: usize, s: String) -> String {
         .join("\n")
 }
 
-pub(crate) fn print_game_info(game: &Game, summary: Option<&Summary>, image: Option<&DynamicImage>, args: &Args) {
-    let mut lines_printed = 0;
+macro_rules! label {
+    ($indent:expr, $label:expr, $value:expr) => {
+        let label = indent_by($indent, format!("{}:", $label).truecolor(200, 200, 200).to_string());
+        println!("{} {}", label, $value);
+    };
+    ($indent:expr, $value:expr) => {
+        let label = indent_by($indent, $value.to_string());
+        println!("{}", label);
+    };
+}
 
-    macro_rules! label {
-        ($label:expr, $value:expr) => {
-            let mut label = format!("{}:", $label).truecolor(200, 200, 200).to_string();
-            if args.images { label = indent_by(GAME_IMAGE_WIDTH as usize + 1, label); }
-            println!("{} {}", label, $value);
-        };
-        ($value:expr) => {
-            let mut label = $value.to_string();
-            if args.images { label = indent_by(GAME_IMAGE_WIDTH as usize + 1, label); }
-            println!("{}", label);
-        };
-    }
+pub(crate) fn print_game_info(game: &Game, summary: Option<&Summary>, image: Option<&DynamicImage>, args: &Args) {
+    let indent = if args.images { GAME_IMAGE_WIDTH as usize + 1 } else { 0 };
+    let mut lines_printed = 0;
 
     if let Some(image) = image {
         print_image(image, GAME_IMAGE_WIDTH, GAME_IMAGE_HEIGHT);
     }
 
-    label!(game.name.bold());
+    label!(indent, game.name.bold());
     lines_printed += 1;
 
     if let Some(summary) = summary {
-        label!("Rating", get_colored_tier(&summary.tier, &game.oslist));
+        label!(indent, "Rating", get_colored_tier(&summary.tier, &game.oslist));
         lines_printed += 1;
 
         let steam_deck_status = game.oslist.iter().find(|os| os.starts_with("Steam Deck"));
         if let Some(status) = steam_deck_status {
             let status = get_colored_steam_deck_status(status);
-            label!("Steam Deck", status);
+            label!(indent, "Steam Deck", status);
             lines_printed += 1;
         }
     } else {
-        label!("Rating", get_colored_tier(&"pending".to_string(), &game.oslist));
+        label!(indent, "Rating", get_colored_tier(&"pending".to_string(), &game.oslist));
         lines_printed += 1;
     }
 
