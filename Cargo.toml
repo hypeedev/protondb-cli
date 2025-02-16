@@ -1,13 +1,12 @@
 [package]
 name = "protondb-cli"
-version = "1.1.0"
+version = "1.1.1"
 edition = "2021"
 
 [dependencies]
 chrono = "0.4.38"
 chrono-humanize = "0.2.3"
 clap = { version = "4.5.11", features = ["derive"] }
-clap_derive = "4.5.11"
 colored = "2.1.0"
 futures = "0.3.30"
 image = "0.24"

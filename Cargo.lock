@@ -1113,12 +1113,11 @@ dependencies = [
 
 [[package]]
 name = "protondb-cli"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "chrono",
  "chrono-humanize",
  "clap",
- "clap_derive",
  "colored",
  "futures",
  "image",
