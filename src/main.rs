@@ -3,20 +3,24 @@ mod post_body;
 mod args;
 mod utils;
 mod display_reports;
+mod reports;
 
 use post_result::PostResult;
 use post_body::Body;
 use args::Args;
-use utils::{fetch_images, fetch_summaries, get_colored_steam_deck_status, get_colored_tier, is_query_id, print_image, Summary};
-use display_reports::{fetch_reports, Reports};
+use utils::{fetch_images, fetch_summaries, is_query_id, Summary};
+use display_reports::{fetch_reports, display_reports};
+use reports::Reports;
+use utils::print_game_info;
 
 use reqwest::ClientBuilder;
 use clap::Parser;
-use colored::Colorize;
 use reqwest::header::HeaderMap;
 use futures::join;
 use image::DynamicImage;
-use crate::display_reports::display_reports;
+
+const GAME_IMAGE_WIDTH: u32 = 14;
+const GAME_IMAGE_HEIGHT: u32 = 3;
 
 #[tokio::main]
 async fn main() {
@@ -85,47 +89,13 @@ async fn main() {
         }
     }
 
-    const IMAGE_WIDTH: u32 = 14;
-    const IMAGE_HEIGHT: u32 = 3;
-    let mut lines_printed;
-    macro_rules! label {
-        ($label:expr, $value:expr) => {
-            // move cursor to the right of the image
-            if args.images { print!("\x1B[{}C", IMAGE_WIDTH + 1) }
-            println!("{} {}", format!("{}:", $label).truecolor(200, 200, 200), $value);
-            lines_printed += 1;
-        };
-        ($value:expr) => {
-            // move cursor to the right of the image
-            if args.images { print!("\x1B[{}C", IMAGE_WIDTH + 1) }
-            println!("{}", $value);
-            lines_printed += 1;
-        };
-    }
-
     for (index, game) in res.hits.into_iter().enumerate() {
-        lines_printed = 0;
         if index != 0 { println!() }
 
-        if args.images { print_image(&images[index], IMAGE_WIDTH, IMAGE_HEIGHT) }
+        let summary = summaries.get(index).and_then(|s| s.as_ref());
+        let image = images.get(index);
 
-        label!(game.name.bold());
-
-        if let Some(summary) = &summaries[index] {
-            label!("Rating", get_colored_tier(&summary.tier, &game.oslist));
-
-            let steam_deck_status = game.oslist.iter().find(|os| os.starts_with("Steam Deck"));
-            if let Some(status) = steam_deck_status {
-                let status = get_colored_steam_deck_status(status);
-                label!("Steam Deck", status);
-            }
-        } else {
-            label!("Rating", get_colored_tier(&"pending".to_string(), &game.oslist));
-        }
-
-        if args.images && IMAGE_HEIGHT > lines_printed {
-            print!("{}", "\n".repeat((IMAGE_HEIGHT - lines_printed) as usize));
-        }
+        print_game_info(&game, summary, image, &args);
     }
 
     if should_display_reports {
