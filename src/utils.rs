@@ -1,3 +1,7 @@
+use crate::{GAME_IMAGE_HEIGHT, GAME_IMAGE_WIDTH};
+use crate::args::Args;
+use crate::post_result::Game;
+
 use colored::{ColoredString, Colorize};
 use futures::future::join_all;
 use image::DynamicImage;
@@ -108,4 +112,63 @@ pub(crate) struct Counts {
 
 pub(crate) fn is_query_id(query: &str) -> bool {
     query.chars().all(char::is_numeric)
+}
+
+pub(crate) fn indent_by(n: usize, s: String) -> String {
+    let indent = " ".repeat(n);
+    s.lines()
+        .map(|line| format!("{}{}", indent, line))
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+pub(crate) fn print_game_info(game: &Game, summary: Option<&Summary>, image: Option<&DynamicImage>, args: &Args) {
+    let mut lines_printed = 0;
+
+    macro_rules! label {
+        ($label:expr, $value:expr) => {
+            let mut label = format!("{}:", $label).truecolor(200, 200, 200).to_string();
+            if args.images { label = indent_by(GAME_IMAGE_WIDTH as usize + 1, label); }
+            println!("{} {}", label, $value);
+        };
+        ($value:expr) => {
+            let mut label = $value.to_string();
+            if args.images { label = indent_by(GAME_IMAGE_WIDTH as usize + 1, label); }
+            println!("{}", label);
+        };
+    }
+
+    if let Some(image) = image {
+        print_image(image, GAME_IMAGE_WIDTH, GAME_IMAGE_HEIGHT);
+    }
+
+    label!(game.name.bold());
+    lines_printed += 1;
+
+    if let Some(summary) = summary {
+        label!("Rating", get_colored_tier(&summary.tier, &game.oslist));
+        lines_printed += 1;
+
+        let steam_deck_status = game.oslist.iter().find(|os| os.starts_with("Steam Deck"));
+        if let Some(status) = steam_deck_status {
+            let status = get_colored_steam_deck_status(status);
+            label!("Steam Deck", status);
+            lines_printed += 1;
+        }
+    } else {
+        label!("Rating", get_colored_tier(&"pending".to_string(), &game.oslist));
+        lines_printed += 1;
+    }
+
+    if args.images && GAME_IMAGE_HEIGHT > lines_printed {
+        print!("{}", "\n".repeat((GAME_IMAGE_HEIGHT - lines_printed) as usize));
+    }
+}
+
+pub(crate) fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str()
+    }
 }
